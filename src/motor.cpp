@@ -1,4 +1,4 @@
-//#include "elmocontrol/stdafx.h"
+
 #include "elmocontrol/motor.h"
 
 

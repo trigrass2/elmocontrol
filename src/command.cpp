@@ -1,16 +1,24 @@
 // 
-
-#include "elmocontrol/command.h"
-#include <string>
-#include "elmocontrol/motor.h"
-#include <sys/time.h>
 #include "canlib.h"
-
+#include "elmocontrol/command.h"
+#include "elmocontrol/motor.h"
+#include "std_msgs/String.h"
+#include <sstream>
+#include <sys/time.h>
+#include <unistd.h>
+#include <ros/ros.h>
+#include <stdio.h>
+#include <signal.h>
+#include <errno.h>
+#include <unistd.h>
+	
 int motormode;
-CanHandle h;
 
 namespace elmocontrol
 {
+
+canHandle h;
+
 unsigned command::GetTickCount()
 {
         struct timeval tv;
@@ -22,50 +30,50 @@ unsigned command::GetTickCount()
 void command::MotorInit()
 {
 	//Elmo driver initialize
-	CAN_DATA canData;
-	UINT32 can_id;
-
+        CAN_DATA canData;
+        UINT32 can_id;
+        
 	canData.dU32[0] = 0;
 
-	for (int i = 0; i<7; i++)
+	int i=0;
 	{
 		can_id = 0;
 		canData.dByte[0] = 0x82;				//
-		canData.dByte[1] = i + 72;
+		canData.dByte[1] = 3;
 		CanSendMessage(can_id, canData, 8);
-		Wait();	// for delay
+		sleep(0.02);	// for delay
 
 	}
 
-	for (int i = 0; i<7; i++)
+
 	{
-		can_id = 0;
+		//can_id =0x0300| (3);
 		canData.dByte[0] = 0x01;				//Ÿêµµ ±×·³. ±×³É ÃÊ±âÈ­ ŽÜ°èÀÓ.
-		canData.dByte[1] = i + 72;
+		canData.dByte[1] = 3;
 		CanSendMessage(can_id, canData, 8);
-		Wait();	// for delay
+		sleep(0.02);	// for delay
+
 
 	}
 
-	for (UINT i = 0; i<7; i++)
+
 	{
-		can_id = 0x0300 | (72 +i);	//Ÿê³×µéµµ ŽÙ ž¶Âù°¡Áö. žðÅÍµå¶óÀÌ¹ö¿¡ Á€ÇØÁ®ÀÖŽÂ ÇÔŒö.
+		can_id = 0x0300 | (3);	
 		stop(canData);
 		CanSendMessage(can_id, canData, 8);
+                motormode=5;
 		if (motormode == 5)
 		{
-			selectMode(5, canData); //Æ÷ÁöŒÇ ÁŠŸî žðµå
-			//GetDlgItem(IDC_BUTTON3)->EnableWindow(false);
+			selectMode(5, canData); //w(false);
 		}
 		else if (motormode == 1)
 		{
-			selectMode(1, canData); //Àü·ùÁŠŸîžðµå
-			//GetDlgItem(IDC_BUTTON3)->EnableWindow(true);
+			selectMode(1, canData); //w(true);
 		}
 
 		CanSendMessage(can_id, canData, 8);
 
-		Wait();	// for delay
+		sleep(0.01);// for delay
 		SF(100, canData);
 		CanSendMessage(can_id, canData, 8);
 		SP(40000, canData);
@@ -74,34 +82,34 @@ void command::MotorInit()
 		CanSendMessage(can_id, canData, 8);
 		DC(50000, canData);
 		CanSendMessage(can_id, canData, 8);
+		sleep(0.01);// for delay
 
-		Wait();	// for delay
 	}
 
-	for (int i = 0; i<7; i++)
 	{
-		can_id = 0x0300 | (72 + i);
+		can_id = 0x0300 | (3);
 		start(canData);
 		CanSendMessage(can_id, canData, 8);
-		Wait();	// for delay
+		sleep(0.01);	// for delay
 	}
 };
 
 //
 
 void command::MotorOn()
-{
-	CAN_DATA canData;
-	UINT32 can_id;
+{       CAN_DATA canData;
+        UINT32 can_id;
+        can_id = 0x0300|(3);
 
 	canData.dU32[0] = 0;
-	for (int i = 0; i<7; i++)
+        int i=0;
 	{
-		can_id = 0x0300 | (72 + i);
-		start(canData);
-		CanSendMessage(can_id, canData, 8);
-		Wait();	// for delay
+		//can_id = 0x0300 | (72 + i);
+	start(canData);
+	CanSendMessage(can_id, canData, 8);
+	  sleep(0.01);	// for delay
 	}
+  //printf("%s", "Motor On");
 };
 
 //
@@ -113,7 +121,7 @@ void command::MotorOff()
 	canData.dU32[0] = 0;
 	for (int i = 0; i<7; i++)
 	{
-		can_id = 0x0300 | (72 + i);
+		can_id = 0x0300 | (3);
 		stop(canData);
 		CanSendMessage(can_id, canData, 8);
 		Wait();	// for delay
@@ -127,16 +135,26 @@ void command::Wait()
 	GetTickCount();
 };
 
-
 //
-void command::CanSendMessage(UINT32 id, CAN_DATA &canData, UINT32 len)
-{
+void command::CanSendMessage(UINT32 id, CAN_DATA &canData, UINT32 len)    
+       
+       
+{       canStatus stat; 
 	char msg[8] = { 0, };
-
+        
 	for (int i = 0; i<len; i++)
 		msg[i] = canData.dByte[i];
-
-	canWrite(h, id, msg, len, 0);
+        stat=canWrite(h, id, msg, len, 0);
+        if (stat != canOK) {
+    char buf[50];
+    buf[0] = '\0';
+    canGetErrorText(stat, buf, sizeof(buf));
+    fprintf(stderr,"canOpenChannel failed (%s)\n", buf);
+    exit(1);
+  }
+  
 };
+
+
 
 }

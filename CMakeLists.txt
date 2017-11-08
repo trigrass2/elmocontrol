@@ -8,6 +8,13 @@ find_package(Boost REQUIRED COMPONENTS system thread)
 
 #roslint_cpp()
 
+catkin_package(
+  INCLUDE_DIRS include
+  LIBRARIES elmocontrol
+  CATKIN_DEPENDS roscpp canopen_402 canopen_master
+  ##DEPENDS system_lib
+)	
+
 set(EXTRAINC_DIRS /home/anhtuan/linuxcan/include)
 set(EXTRALIB_DIRS /home/anhtuan/linuxcan/canlib/libcanlib.so)
 
@@ -18,24 +25,16 @@ include_directories(
  ${EXTRAINC_DIRS}
 )
 
-catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES elmocontrol
-  CATKIN_DEPENDS roscpp canopen_402 canopen_master
-  ##DEPENDS system_lib
-)	
-
 ## Declare a C++ library
 add_library(elmocontrol src/elmocontrol_node.cpp src/command.cpp src/motor.cpp)
 add_executable(elmocontrol_node src/elmocontrol_node.cpp src/command.cpp src/motor.cpp)
-add_dependencies(elmocontrol_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(elmocontrol_node elmocontrol)
 
 target_link_libraries(elmocontrol ${catkin_LIBRARIES} ${EXTRALIB_DIRS})
 
 target_link_libraries(elmocontrol_node
    ${catkin_LIBRARIES}
-   ${PROJECT_NAME}
-   ${EXTRALIB_DIRS}
+   elmocontrol
  )
 ## Specify libraries to link a library or executable target against
 
